@@ -22,6 +22,7 @@ Router.get('/perfilInstitucion', registro.perfilInstitucion.bind(registro))
 
 Router.get('/listaInstituciones', institucion.listarInstituciones.bind(institucion))
 
+
 // RUTAS PARA ESTUDIANTES
 Router.post('/registrarEstudiante', registro.registrarEstudiante.bind(registro))
 Router.post('/loginEstudiante', registro.loginEstudiante.bind(registro))
@@ -30,9 +31,18 @@ Router.post('/cambiarContraseñaE', registro.cambiarPassword.bind(registro))
 Router.get('/perfilEstudiante', registro.perfilEstudiante.bind(registro))
   .use(authjwt.handle.bind(authjwt))
 
-Router.get('/estudiantes/:id_institucion', estudiante.filtrarEstudiantes.bind(estudiante))
+// Filtrar estudiantes (con id_institucion del token)
+Router.get('/estudiantes', estudiante.filtrarEstudiantes.bind(estudiante))
+  .use(authjwt.handle.bind(authjwt))
+
+// Importar CSV protegido
 Router.post('/estudianteCSV', estudiante.subirCSV.bind(estudiante))
-Router.get('/listarPorInstituciones/:id', estudiante.listarPorInstitucion.bind(estudiante))
+  .use(authjwt.handle.bind(authjwt))
+
+// Listar estudiantes por institución (sin parámetro en URL)
+Router.get('/listarPorInstituciones', estudiante.listarPorInstitucion.bind(estudiante))
+  .use(authjwt.handle.bind(authjwt))
+
 
 //  RUTAS DE KOLB (Test de estilo de aprendizaje)
 Router.get('/kolb/preguntas', kolb.listarPreguntas.bind(kolb))
