@@ -77,17 +77,26 @@ export default class KolbService {
 
     console.log('Estilo Dominante calculado:', estiloDominante)
 
-    const estiloAprendizaje = await EstilosAprendizajes.query()
-    .whereILike('estilo', `%${estiloDominante.trim()}%`) // IGNORA mayúsculas/minúsculas
-    .first()
+    estiloDominante = estiloDominante.replace(/\s+/g, '').toUpperCase()
+
+      const estiloAprendizaje = await EstilosAprendizajes.query()
+  .whereILike('estilo', `%${estiloDominante.trim()}%`)
+  .first()
+
 
     if (!estiloAprendizaje) {
       return { mensaje: 'No se encontró información del estilo' }
     }
 
-    test.estilo_aprendizaje = estiloAprendizaje.estilo
-    test.id_estilos_aprendizajes = estiloAprendizaje.id_estilos_aprendizajes
-    await test.save()
+    test.estilo_aprendizaje = estiloDominante  
+
+      if (estiloAprendizaje) {
+        test.id_estilos_aprendizajes = estiloAprendizaje.id_estilos_aprendizajes
+      }
+
+      await test.save()
+
+    console.log('Test guardado con estilo:', test.toJSON())
 
     return {
       mensaje: 'Test guardado correctamente',
@@ -98,25 +107,36 @@ export default class KolbService {
   }
 
   // Servicio para obtener el resultado más reciente del estudiante
+  // Servicio para obtener el resultado más reciente del estudiante
   async obtenerResultado(id_usuario: number) {
-    const test = await TestPorEstudiantes.query()
-      .where('id_usuario', id_usuario)
-      .orderBy('fecha_presentacion', 'desc')
-      .preload('estilo')   // carga datos del estilo
-      .preload('estudiante')  // carga datos del estudiante
-      .first()
+  const test = await TestPorEstudiantes.query()
+  .where('id_usuario', id_usuario)
+  .orderBy('id_test_ea_por_estudiantes', 'desc') // 👈 ordenamos por el ID
+  .preload('estudiante')
+  .first()
 
-    if (!test) {
-      return { mensaje: 'No se encontró un test para este usuario' }
-    }
 
-    return {
-      nombre: test.estudiante?.nombre_usuario,
-      apellido: test.estudiante?.apellido,
-      fecha: test.fecha_presentacion,
-      estilo: test.estilo_aprendizaje,
-      caracteristicas: test.estilo?.caracteristicas,
-      recomendaciones: test.estilo?.recomendaciones,
-    }
+  if (!test) {
+    return { mensaje: 'No se encontró un test para este usuario' }
   }
+
+  console.log('Test recuperado:', test.toJSON()) // 👀
+
+  // Intentar traer el estilo manualmente
+  let estiloAprendizaje = null
+  if (test.id_estilos_aprendizajes) {
+    estiloAprendizaje = await EstilosAprendizajes.find(test.id_estilos_aprendizajes)
+  }
+
+  return {
+  nombre: test.estudiante?.nombre_usuario,
+  apellido: test.estudiante?.apellido,
+  fecha: test.fecha_presentacion,
+  estilo: estiloAprendizaje ? estiloAprendizaje.estilo : test.estilo_aprendizaje, // 👈 corrección
+  caracteristicas: estiloAprendizaje ? estiloAprendizaje.caracteristicas : null,
+  recomendaciones: estiloAprendizaje ? estiloAprendizaje.recomendaciones : null,
+}
+
+}
+
 }
