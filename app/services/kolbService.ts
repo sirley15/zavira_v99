@@ -18,7 +18,20 @@ export default class KolbService {
 
   // Guarda las respuestas del estudiante y calcula su estilo de aprendizaje
   async guardarRespuestas(data: any) {
+  
     const { id_usuario, respuestas } = data
+
+    const totalPreguntas = await PreguntaEstiloAprendizajes.query()
+    .count('* as total');
+
+    const total = (totalPreguntas[0] as any)?.total ?? 0;
+
+      if (respuestas.length !== total) {
+      return {
+        mensaje: 'Debes responder todas las preguntas',
+        error: true
+      };
+    }
 
     const test = await TestPorEstudiantes.create({
       id_usuario,
@@ -106,12 +119,12 @@ export default class KolbService {
     }
   }
 
-  // Servicio para obtener el resultado más reciente del estudiante
+ 
   // Servicio para obtener el resultado más reciente del estudiante
   async obtenerResultado(id_usuario: number) {
   const test = await TestPorEstudiantes.query()
   .where('id_usuario', id_usuario)
-  .orderBy('id_test_ea_por_estudiantes', 'desc') // 👈 ordenamos por el ID
+  .orderBy('id_test_ea_por_estudiantes', 'desc') //ordenamos por el ID
   .preload('estudiante')
   .first()
 
@@ -119,8 +132,7 @@ export default class KolbService {
   if (!test) {
     return { mensaje: 'No se encontró un test para este usuario' }
   }
-
-  console.log('Test recuperado:', test.toJSON()) // 👀
+  console.log('Test recuperado:', test.toJSON()) // 
 
   // Intentar traer el estilo manualmente
   let estiloAprendizaje = null
@@ -132,7 +144,7 @@ export default class KolbService {
   nombre: test.estudiante?.nombre_usuario,
   apellido: test.estudiante?.apellido,
   fecha: test.fecha_presentacion,
-  estilo: estiloAprendizaje ? estiloAprendizaje.estilo : test.estilo_aprendizaje, // 👈 corrección
+  estilo: estiloAprendizaje ? estiloAprendizaje.estilo : test.estilo_aprendizaje, //  corrección
   caracteristicas: estiloAprendizaje ? estiloAprendizaje.caracteristicas : null,
   recomendaciones: estiloAprendizaje ? estiloAprendizaje.recomendaciones : null,
 }
