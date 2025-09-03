@@ -75,9 +75,11 @@ export default class KolbService {
       }
     }
 
+    console.log('Estilo Dominante calculado:', estiloDominante)
+
     const estiloAprendizaje = await EstilosAprendizajes.query()
-      .where('estilo', estiloDominante)
-      .first()
+    .whereILike('estilo', `%${estiloDominante.trim()}%`) // IGNORA mayúsculas/minúsculas
+    .first()
 
     if (!estiloAprendizaje) {
       return { mensaje: 'No se encontró información del estilo' }
