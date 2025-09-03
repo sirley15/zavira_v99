@@ -22,16 +22,18 @@ export default class KolbService {
     const { id_usuario, respuestas } = data
 
     const totalPreguntas = await PreguntaEstiloAprendizajes.query()
-    .count('* as total');
+  .count('* as total')
 
-    const total = (totalPreguntas[0] as any)?.total ?? 0;
+    const total = Number((totalPreguntas[0] as any)?.$extras?.total ?? 0)
 
-      if (respuestas.length !== total) {
+    // Validación correcta
+    if (respuestas.length !== total) {
       return {
-        mensaje: 'Debes responder todas las preguntas',
+        mensaje: `Debes responder todas las preguntas (${respuestas.length}/${total})`,
         error: true
-      };
+      }
     }
+
 
     const test = await TestPorEstudiantes.create({
       id_usuario,
