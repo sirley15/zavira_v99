@@ -6,7 +6,6 @@ import jwt from 'jsonwebtoken'
 const SECRET = process.env.jwt_secret || 'secret123'
 
 export default class RegistroService {
-  
   //        INSTITUCIONES
 
   // Crear registro + TOKEN
@@ -64,15 +63,15 @@ export default class RegistroService {
     if (!passwordValida) return 'La contraseña es incorrecta'
 
     const token = jwt.sign(
-  {
-    id_institucion: respuesta.id_institucion, 
-    correo: respuesta.correo,
-    rol: 'Administrador',
-    timestamp: Date.now(),
-  },
-  SECRET,
-  { expiresIn: '7d' }
-)
+      {
+        id_institucion: respuesta.id_institucion,
+        correo: respuesta.correo,
+        rol: 'Administrador',
+        timestamp: Date.now(),
+      },
+      SECRET,
+      { expiresIn: '7d' }
+    )
 
     return {
       mensaje: 'Login exitoso',
@@ -92,7 +91,7 @@ export default class RegistroService {
     return { mensaje: 'Contraseña actualizada correctamente' }
   }
 
-  // Perfil (verifica token)
+  // Perfil institución
   async perfilInstitucion(token: string) {
     try {
       const jwtcode = jwt.verify(token, SECRET)
@@ -102,82 +101,72 @@ export default class RegistroService {
     }
   }
 
-  
   //         ESTUDIANTES
- 
 
   // Crear registro + TOKEN
-async registrarEstudiante(data: any, token: string) {
-  try {
-    // Verificar el token y extraer payload
-    const payload: any = jwt.verify(token, SECRET)
-    
-    if (!payload || payload.rol !== 'Administrador') {
-      throw new Error('No autorizado')
+  async registrarEstudiante(data: any, token: string) {
+    try {
+      const payload: any = jwt.verify(token, SECRET)
+
+      if (!payload || payload.rol !== 'Administrador') {
+        throw new Error('No autorizado')
+      }
+
+      const id_institucion = payload.id_institucion
+      if (!id_institucion) {
+        throw new Error('Institución no encontrada en token')
+      }
+
+      const {
+        nombre_usuario,
+        apellido,
+        tipo_documento,
+        numero_documento,
+        grado,
+        curso,
+        jornada,
+        correo,
+      } = data
+
+      const ap = String(apellido || '')
+      const passwordPlana = String(numero_documento) + ap.slice(-3)
+      const passwordEncriptada = await bcrypt.hash(passwordPlana, 10)
+
+      const estudiante = await Usuario.create({
+        nombre_usuario,
+        apellido,
+        tipo_documento,
+        numero_documento,
+        grado,
+        curso,
+        jornada,
+        correo,
+        password: passwordEncriptada,
+        rol: 'Usuario',
+        id_institucion,
+      })
+
+      const tokenEstudiante = jwt.sign(
+        {
+          id: estudiante.id_usuario,
+          documento: estudiante.numero_documento,
+          rol: estudiante.rol,
+          timestamp: Date.now(),
+        },
+        SECRET,
+        { expiresIn: '7d' }
+      )
+
+      return {
+        mensaje: 'Estudiante registrado correctamente',
+        password_temporal: passwordPlana,
+        estudiante,
+        token: tokenEstudiante,
+      }
+    } catch (error) {
+      return { error: error.message || 'Error desconocido' }
     }
-
-    // Extraer id_institucion del token
-    const id_institucion = payload.id_institucion
-    if (!id_institucion) {
-      throw new Error('Institución no encontrada en token')
-    }
-
-    // Extraer datos del estudiante
-    const {
-      nombre_usuario,
-      apellido,
-      tipo_documento,
-      numero_documento,
-      grado,
-      curso,
-      jornada,
-      correo,
-      // ya no se usa id_institucion acá, porque viene del token
-    } = data
-
-    // Generar password temporal y hash
-    const ap = String(apellido || '')
-    const passwordPlana = String(numero_documento) + ap.slice(-3)
-    const passwordEncriptada = await bcrypt.hash(passwordPlana, 10)
-
-    // Crear estudiante con id_institucion del token
-    const estudiante = await Usuario.create({
-      nombre_usuario,
-      apellido,
-      tipo_documento,
-      numero_documento,
-      grado,
-      curso,
-      jornada,
-      correo,
-      password: passwordEncriptada,
-      rol: 'Usuario',
-      id_institucion,  // viene del token
-    })
-
-    // Generar token para el estudiante
-    const tokenEstudiante = jwt.sign(
-      {
-        id: estudiante.id_usuario,
-        documento: estudiante.numero_documento,
-        rol: estudiante.rol,
-        timestamp: Date.now(),
-      },
-      SECRET,
-      { expiresIn: '7d' }
-    )
-
-    return {
-      mensaje: 'Estudiante registrado correctamente',
-      password_temporal: passwordPlana,
-      estudiante,
-      token: tokenEstudiante,
-    }
-  } catch (error) {
-    return { error: error.message || 'Error desconocido' }
   }
-}
-
 
   // Login + TOKEN
   async loginEstudiante(numero_documento: string, password: string) {
@@ -209,7 +198,7 @@ async registrarEstudiante(data: any, token: string) {
     }
   }
 
-  // Cambiar contraseña
+  // Cambiar contraseña estudiante
   async cambiarPasswordEstudiante(correo: string, nuevaPassword: string) {
     const estudiante = await Usuario.query()
       .where('correo', correo)
@@ -224,30 +213,31 @@ async registrarEstudiante(data: any, token: string) {
     return { mensaje: 'Contraseña actualizada correctamente' }
   }
 
-  // Perfil (verifica token)
-  // Perfil (verifica token estudiante)
-async perfilEstudiante(token: string) {
-  try {
-    const payload: any = jwt.verify(token, SECRET)
+  // Perfil estudiante (OBJETO PLANO para Android)
+  async perfilEstudiante(token: string) {
+    try {
+      const payload: any = jwt.verify(token, SECRET)
 
-    // validar que sea un estudiante (rol Usuario)
-    if (payload.rol !== 'Usuario') {
-      return { error: 'No autorizado, este token no es de estudiante' }
-    }
-
-    return { 
-      mensaje: 'JWT válido', 
-      datos: {
-        id_usuario: payload.id,
-        documento: payload.documento,
-        rol: payload.rol,
+      if (!payload || payload.rol !== 'Usuario') {
+        return { error: 'No autorizado, este token no es de estudiante' }
       }
+
+      const est = await Usuario.findBy('id_usuario', payload.id)
+      if (!est) {
+        return { error: 'Perfil no encontrado' }
+      }
+
+      return {
+        nombre_usuario:   est.nombre_usuario ?? null,
+        apellido:         est.apellido ?? null,
+        numero_documento: est.numero_documento ?? payload.documento ?? null,
+        grado:            est.grado ?? null,
+        curso:            est.curso ?? null,
+        jornada:          est.jornada ?? null,
+        correo:           est.correo ?? null,
+      }
+    } catch {
+      return { error: 'Token INVÁLIDO o expirado' }
     }
-  } catch (e) {
-    return { error: 'Token INVÁLIDO o expirado' }
   }
 }
-
-
-}
-  
