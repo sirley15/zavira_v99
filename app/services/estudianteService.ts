@@ -2,7 +2,25 @@ import Usuario from '../models/usuario.js'
 import bcrypt from 'bcrypt'
 
 export default class EstudianteService {
-  
+
+  async listarPorInstitucion(id_institucion: number) {
+    return await Usuario.query()
+      .where('id_institucion', id_institucion)
+      .where('rol', 'Usuario') 
+      .select([
+        'id_usuario',
+        'nombre_usuario',
+        'apellido',
+        'tipo_documento',
+        'numero_documento',
+        'grado',
+        'curso',
+        'jornada',
+        'correo',
+      ])
+      .orderBy('apellido', 'asc')
+  }
+
   async listarEstudiantes(
     id_institucion: number,
     grado?: number,
@@ -11,14 +29,29 @@ export default class EstudianteService {
   ) {
     const query = Usuario.query()
       .where('id_institucion', id_institucion)
-      .where('rol', 'Usuario')
+      .where('rol', 'Usuario') 
+      .select([
+        'id_usuario',
+        'nombre_usuario',
+        'apellido',
+        'tipo_documento',
+        'numero_documento',
+        'grado',
+        'curso',
+        'jornada',
+        'correo',
+      ])
 
-    if (grado !== undefined && grado !== null) query.where('grado', grado)
+    if (grado != null) query.where('grado', grado)
     if (curso) query.where('curso', curso)
     if (jornada) query.where('jornada', jornada)
 
     return await query
+      .orderBy('grado', 'asc')
+      .orderBy('curso', 'asc')
+      .orderBy('apellido', 'asc')
   }
+
 
   async obtenerEstudiante(id_usuario: number, id_institucion: number) {
     const user = await Usuario.query()
@@ -81,10 +114,4 @@ export default class EstudianteService {
     return { mensaje: 'Estudiante eliminado' }
   }
 
-  
-  async listarPorInstitucion(id_institucion: number) {
-    return await Usuario.query()
-      .where('id_institucion', id_institucion)
-      .where('rol', 'Usuario')
-  }
 }
