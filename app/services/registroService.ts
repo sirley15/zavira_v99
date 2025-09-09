@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken'
 const SECRET = process.env.jwt_secret || 'secret123'
 
 export default class RegistroService {
-  //        INSTITUCIONES
+  //  INSTITUCIONES
 
   // Crear registro + TOKEN
   async registrarInstitucion(datos: any) {
@@ -101,7 +101,7 @@ export default class RegistroService {
     }
   }
 
-  //         ESTUDIANTES
+  //ESTUDIANTES
 
   // Crear registro + TOKEN
   async registrarEstudiante(data: any, token: string) {
