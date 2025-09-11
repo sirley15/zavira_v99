@@ -30,7 +30,7 @@ export default class KolbController {
     }
 
     const respuestas = body.respuestas
-    const authUsuario = request.input("authUsuario") // lo sigues recibiendo normal
+    const authUsuario = request.authUsuario // Esto es correcto
 
 
     if (!respuestas) {

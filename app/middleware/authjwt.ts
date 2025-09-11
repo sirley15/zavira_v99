@@ -15,7 +15,9 @@ export default class Authjwt {
 
     try {
       const jwtcode = jwt.verify(token, SECRET)
-      // ✅ No tocar el body:
+      
+  
+      console.log("AuthUsuario en el middleware:", (request as any).authUsuario)
       ;(request as any).authUsuario = jwtcode
       await next()
     } catch {
