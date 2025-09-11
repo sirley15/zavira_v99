@@ -64,43 +64,79 @@ export default class EstudianteService {
   }
 
   async actualizarEstudiante(id_usuario: number, id_institucion: number, payload: any) {
-  const user = await Usuario.query()
-    .where('id_usuario', id_usuario)
-    .where('id_institucion', id_institucion)
-    .first()
+  // Acepta snake_case o camelCase y normaliza todo a las columnas de BD.
+  const p = payload || {}
 
-  if (!user) return { error: 'Estudiante no encontrado' }
+  const toStr = (v: any) => (v === undefined ? undefined : String(v))
+  const norm: any = {}
 
-  const {
-    nombre_usuario,
-    apellido,
-    tipo_documento,
-    numero_documento,
-    grado,
-    curso,
-    jornada,
-    correo,
-    password,
-  } = payload
+  // nombre_usuario
+  norm.nombre_usuario = toStr(p.nombre_usuario ?? p.nombreUsuario)
+  // apellido
+  norm.apellido = toStr(p.apellido)
+  // tipo_documento (si viene, a UPPERCASE)
+  const td = toStr(p.tipo_documento ?? p.tipoDocumento)
+  if (td !== undefined) norm.tipo_documento = td.toUpperCase()
+  // numero_documento
+  const nd = toStr(p.numero_documento ?? p.numeroDocumento)
+  if (nd !== undefined) norm.numero_documento = nd
+  // grado (numérico si vino)
+  if (p.grado !== undefined && p.grado !== null && String(p.grado) !== '') {
+    const g = Number(p.grado)
+    if (!Number.isNaN(g)) norm.grado = g
+  }
+  // curso
+  norm.curso = toStr(p.curso)
+  // jornada
+  norm.jornada = toStr(p.jornada)
+  // correo
+  norm.correo = toStr(p.correo)
 
-  if (nombre_usuario !== undefined) user.nombre_usuario = String(nombre_usuario)
-  if (apellido !== undefined) user.apellido = String(apellido)
-  if (tipo_documento !== undefined) user.tipo_documento = String(tipo_documento).toUpperCase()
-  if (numero_documento !== undefined) user.numero_documento = String(numero_documento) as any
-  if (grado !== undefined && grado !== null && !Number.isNaN(Number(grado))) user.grado = Number(grado)
-  if (curso !== undefined) user.curso = String(curso)
-  if (jornada !== undefined) user.jornada = String(jornada)
-  if (correo !== undefined) user.correo = String(correo)
-
-  if (password !== undefined && String(password).trim() !== '') {
-    user.password = await bcrypt.hash(String(password), 10)
+  // Purga claves undefined para evitar updates vacíos
+  for (const k of Object.keys(norm)) {
+    if (norm[k] === undefined) delete norm[k]
   }
 
-  await user.save()
-  await user.refresh() // <- asegura que lo devuelto es lo que quedó en BD
+  if (Object.keys(norm).length === 0) {
+    return { error: 'No hay campos para actualizar' }
+  }
 
-  return { mensaje: 'Estudiante actualizado correctamente', estudiante: user }
+  // Actualiza updated_at si tu tabla lo usa en snake_case
+  norm.updated_at = new Date()
+
+  // UPDATE atómico sin returning
+  const affected = await Usuario.query()
+    .where('id_usuario', id_usuario)
+    .where('id_institucion', id_institucion)
+    .update(norm)
+
+  if (!affected) {
+    return { error: 'Estudiante no encontrado' }
+  }
+
+  // Vuelve a leer lo guardado desde BD
+  const estudiante = await Usuario.query()
+    .where('id_usuario', id_usuario)
+    .where('id_institucion', id_institucion)
+    .select([
+      'id_usuario',
+      'nombre_usuario',
+      'apellido',
+      'tipo_documento',
+      'numero_documento',
+      'grado',
+      'curso',
+      'jornada',
+      'correo',
+      'id_institucion',
+      'created_at',
+      'updated_at',
+    ])
+    .first()
+
+  return { mensaje: 'Estudiante actualizado correctamente', estudiante }
 }
+
 
 
   

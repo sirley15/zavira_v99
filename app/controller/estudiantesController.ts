@@ -74,46 +74,33 @@ export default class EstudiantesController {
     }
   }
 
-  // PATCH/PUT /actualizarEstudiante/:id  (limitado por id_institucion del token)
-
+ // PATCH/PUT /actualizarEstudiante/:id  (limitado por id_institucion del token)
 async actualizarEstudiante({ params, request, response }: HttpContext) {
   try {
-    const payload = getAdminPayload(request) // valida token + rol=Administrador
-    const id_institucion = Number(payload.id_institucion)
+    const payloadJWT = getAdminPayload(request) // valida token + rol=Administrador
+    const id_institucion = Number(payloadJWT.id_institucion)
 
     const id_usuario = Number(params.id)
     if (!Number.isFinite(id_usuario)) {
       return response.badRequest({ error: 'ID inválido' })
     }
 
-    // Aceptar snake_case y camelCase
-    const b: any = request.body() || {}
-    const pick = (a: any, b: any) =>
-      a !== undefined && a !== null && String(a).trim() !== '' ? a : b
+    // Cuerpo tal cual venga (snake/camel), sin romper si es undefined.
+    const raw = request.body() || {};
+console.log('CT=', request.header('content-type'), 'keys=', Object.keys(raw));
 
-    const body = {
-      nombre_usuario: pick(b.nombre_usuario, b.nombreUsuario),
-      apellido: pick(b.apellido, b.apellidos),
-      tipo_documento: (pick(b.tipo_documento, b.tipoDocumento) || '').toUpperCase() || undefined,
-      numero_documento: pick(b.numero_documento, b.numeroDocumento),
-      grado: b.grado !== undefined ? Number(b.grado) : undefined,
-      curso: pick(b.curso, b.curso),           // mismo nombre en ambos casos
-      jornada: pick(b.jornada, b.jornada),     // idem
-      correo: pick(b.correo, b.email),
-      password: b.password,
-    }
-
-    // Quitar undefined para no sobreescribir con vacío
-    Object.keys(body).forEach((k) => (body as any)[k] === undefined && delete (body as any)[k])
 
     const resultado = await estudianteService.actualizarEstudiante(
       id_usuario,
       id_institucion,
-      body
+      raw
     )
 
+    if ((resultado as any)?.error === 'No hay campos para actualizar') {
+      return response.badRequest(resultado) // 400 semántico
+    }
     if ((resultado as any)?.error) {
-      return response.notFound(resultado)
+      return response.notFound(resultado) // 404 si no pertenece a la institución / no existe
     }
 
     return response.ok(resultado)
