@@ -75,6 +75,7 @@ export default class EstudiantesController {
   }
 
   // PATCH/PUT /actualizarEstudiante/:id  (limitado por id_institucion del token)
+
 async actualizarEstudiante({ params, request, response }: HttpContext) {
   try {
     const payload = getAdminPayload(request) // valida token + rol=Administrador
@@ -85,18 +86,25 @@ async actualizarEstudiante({ params, request, response }: HttpContext) {
       return response.badRequest({ error: 'ID inválido' })
     }
 
-    // Solo los campos permitidos
-    const body = request.only([
-      'nombre_usuario',
-      'apellido',
-      'tipo_documento',
-      'numero_documento',
-      'grado',
-      'curso',
-      'jornada',
-      'correo',
-      'password',
-    ])
+    // Aceptar snake_case y camelCase
+    const b: any = request.body() || {}
+    const pick = (a: any, b: any) =>
+      a !== undefined && a !== null && String(a).trim() !== '' ? a : b
+
+    const body = {
+      nombre_usuario: pick(b.nombre_usuario, b.nombreUsuario),
+      apellido: pick(b.apellido, b.apellidos),
+      tipo_documento: (pick(b.tipo_documento, b.tipoDocumento) || '').toUpperCase() || undefined,
+      numero_documento: pick(b.numero_documento, b.numeroDocumento),
+      grado: b.grado !== undefined ? Number(b.grado) : undefined,
+      curso: pick(b.curso, b.curso),           // mismo nombre en ambos casos
+      jornada: pick(b.jornada, b.jornada),     // idem
+      correo: pick(b.correo, b.email),
+      password: b.password,
+    }
+
+    // Quitar undefined para no sobreescribir con vacío
+    Object.keys(body).forEach((k) => (body as any)[k] === undefined && delete (body as any)[k])
 
     const resultado = await estudianteService.actualizarEstudiante(
       id_usuario,
@@ -105,7 +113,7 @@ async actualizarEstudiante({ params, request, response }: HttpContext) {
     )
 
     if ((resultado as any)?.error) {
-      return response.notFound(resultado)  // 404 si no existe o no pertenece a la institución
+      return response.notFound(resultado)
     }
 
     return response.ok(resultado)
@@ -116,6 +124,7 @@ async actualizarEstudiante({ params, request, response }: HttpContext) {
     return response.badRequest({ error: 'Error al actualizar estudiante', detalle: err.message })
   }
 }
+
 
 // DELETE /eliminarEstudiante/:id  (limitado por id_institucion del token)
 async eliminarEstudiante({ params, request, response }: HttpContext) {

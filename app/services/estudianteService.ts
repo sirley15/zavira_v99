@@ -64,42 +64,44 @@ export default class EstudianteService {
   }
 
   async actualizarEstudiante(id_usuario: number, id_institucion: number, payload: any) {
-    const user = await Usuario.query()
-      .where('id_usuario', id_usuario)
-      .where('id_institucion', id_institucion)
-      .first()
+  const user = await Usuario.query()
+    .where('id_usuario', id_usuario)
+    .where('id_institucion', id_institucion)
+    .first()
 
-    if (!user) return { error: 'Estudiante no encontrado' }
+  if (!user) return { error: 'Estudiante no encontrado' }
 
-    const {
-      nombre_usuario,
-      apellido,
-      tipo_documento,
-      numero_documento,
-      grado,
-      curso,
-      jornada,
-      correo,
-      password,
-     
-    } = payload
+  const {
+    nombre_usuario,
+    apellido,
+    tipo_documento,
+    numero_documento,
+    grado,
+    curso,
+    jornada,
+    correo,
+    password,
+  } = payload
 
-    if (nombre_usuario !== undefined) user.nombre_usuario = nombre_usuario
-    if (apellido !== undefined) user.apellido = apellido
-    if (tipo_documento !== undefined) user.tipo_documento = tipo_documento
-    if (numero_documento !== undefined) user.numero_documento = numero_documento
-    if (grado !== undefined) user.grado = grado
-    if (curso !== undefined) user.curso = curso
-    if (jornada !== undefined) user.jornada = jornada
-    if (correo !== undefined) user.correo = correo
+  if (nombre_usuario !== undefined) user.nombre_usuario = String(nombre_usuario)
+  if (apellido !== undefined) user.apellido = String(apellido)
+  if (tipo_documento !== undefined) user.tipo_documento = String(tipo_documento).toUpperCase()
+  if (numero_documento !== undefined) user.numero_documento = String(numero_documento) as any
+  if (grado !== undefined && grado !== null && !Number.isNaN(Number(grado))) user.grado = Number(grado)
+  if (curso !== undefined) user.curso = String(curso)
+  if (jornada !== undefined) user.jornada = String(jornada)
+  if (correo !== undefined) user.correo = String(correo)
 
-    if (password !== undefined && String(password).trim() !== '') {
-      user.password = await bcrypt.hash(String(password), 10)
-    }
-
-    await user.save()
-    return { mensaje: 'Estudiante actualizado correctamente', estudiante: user }
+  if (password !== undefined && String(password).trim() !== '') {
+    user.password = await bcrypt.hash(String(password), 10)
   }
+
+  await user.save()
+  await user.refresh() // <- asegura que lo devuelto es lo que quedó en BD
+
+  return { mensaje: 'Estudiante actualizado correctamente', estudiante: user }
+}
+
 
   
   async eliminarEstudiante(id_usuario: number, id_institucion: number) {
