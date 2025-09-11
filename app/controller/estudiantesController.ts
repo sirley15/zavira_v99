@@ -74,48 +74,78 @@ export default class EstudiantesController {
     }
   }
 
-  // PATCH /estudiantes/:id  (limitado por id_institucion del token)
-  async actualizarEstudiante({ params, request, response }: HttpContext) {
-    try {
-      const payload = getAdminPayload(request)
-      const id_institucion = Number(payload.id_institucion)
+  // PATCH/PUT /actualizarEstudiante/:id  (limitado por id_institucion del token)
+async actualizarEstudiante({ params, request, response }: HttpContext) {
+  try {
+    const payload = getAdminPayload(request) // valida token + rol=Administrador
+    const id_institucion = Number(payload.id_institucion)
 
-      const id_usuario = Number(params.id)
-      if (Number.isNaN(id_usuario)) {
-        return response.badRequest({ error: 'ID inválido' })
-      }
-
-      const body = request.body()
-      const resultado = await estudianteService.actualizarEstudiante(id_usuario, id_institucion, body)
-      return response.ok(resultado)
-    } catch (err: any) {
-      if (err.message === 'No autorizado' || err.name === 'JsonWebTokenError') {
-        return response.unauthorized({ error: 'No autorizado' })
-      }
-      return response.badRequest({ error: 'Error al actualizar estudiante', detalle: err.message })
+    const id_usuario = Number(params.id)
+    if (!Number.isFinite(id_usuario)) {
+      return response.badRequest({ error: 'ID inválido' })
     }
-  }
 
-  // DELETE /estudiantes/:id  (limitado por id_institucion del token)
-  async eliminarEstudiante({ params, request, response }: HttpContext) {
-    try {
-      const payload = getAdminPayload(request)
-      const id_institucion = Number(payload.id_institucion)
+    // Solo los campos permitidos
+    const body = request.only([
+      'nombre_usuario',
+      'apellido',
+      'tipo_documento',
+      'numero_documento',
+      'grado',
+      'curso',
+      'jornada',
+      'correo',
+      'password',
+    ])
 
-      const id_usuario = Number(params.id)
-      if (Number.isNaN(id_usuario)) {
-        return response.badRequest({ error: 'ID inválido' })
-      }
+    const resultado = await estudianteService.actualizarEstudiante(
+      id_usuario,
+      id_institucion,
+      body
+    )
 
-      const resultado = await estudianteService.eliminarEstudiante(id_usuario, id_institucion)
-      return response.ok(resultado)
-    } catch (err: any) {
-      if (err.message === 'No autorizado' || err.name === 'JsonWebTokenError') {
-        return response.unauthorized({ error: 'No autorizado' })
-      }
-      return response.badRequest({ error: 'Error al eliminar estudiante', detalle: err.message })
+    if ((resultado as any)?.error) {
+      return response.notFound(resultado)  // 404 si no existe o no pertenece a la institución
     }
+
+    return response.ok(resultado)
+  } catch (err: any) {
+    if (err.message === 'No autorizado' || err.name === 'JsonWebTokenError') {
+      return response.unauthorized({ error: 'No autorizado' })
+    }
+    return response.badRequest({ error: 'Error al actualizar estudiante', detalle: err.message })
   }
+}
+
+// DELETE /eliminarEstudiante/:id  (limitado por id_institucion del token)
+async eliminarEstudiante({ params, request, response }: HttpContext) {
+  try {
+    const payload = getAdminPayload(request)
+    const id_institucion = Number(payload.id_institucion)
+
+    const id_usuario = Number(params.id)
+    if (!Number.isFinite(id_usuario)) {
+      return response.badRequest({ error: 'ID inválido' })
+    }
+
+    const resultado = await estudianteService.eliminarEstudiante(
+      id_usuario,
+      id_institucion
+    )
+
+    if ((resultado as any)?.error) {
+      return response.notFound(resultado)  // 404 si no existe o no pertenece a la institución
+    }
+
+    return response.ok(resultado)
+  } catch (err: any) {
+    if (err.message === 'No autorizado' || err.name === 'JsonWebTokenError') {
+      return response.unauthorized({ error: 'No autorizado' })
+    }
+    return response.badRequest({ error: 'Error al eliminar estudiante', detalle: err.message })
+  }
+}
+
 
   // POST /estudianteCSV  (multipart/form-data, campo: "file" o "archivo")
   async subirCSV({ request, response }: HttpContext) {

@@ -6,7 +6,7 @@ export default class EstudianteService {
   async listarPorInstitucion(id_institucion: number) {
     return await Usuario.query()
       .where('id_institucion', id_institucion)
-      .where('rol', 'Usuario') 
+      .where('rol', 'Usuario')
       .select([
         'id_usuario',
         'nombre_usuario',
