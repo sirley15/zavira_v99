@@ -30,7 +30,7 @@ export default class KolbController {
     }
 
     const respuestas = body.respuestas
-    const authUsuario = request.authUsuario // Esto es correcto
+    const authUsuario = request.authUsuario 
 
 
     if (!respuestas) {

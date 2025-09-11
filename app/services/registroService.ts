@@ -92,14 +92,42 @@ export default class RegistroService {
   }
 
   // Perfil institución
-  async perfilInstitucion(token: string) {
-    try {
-      const jwtcode = jwt.verify(token, SECRET)
-      return { mensaje: 'JWT válido', datos: jwtcode }
-    } catch (e) {
-      return { error: 'Token INVÁLIDO' }
+  // Perfil institución (OBJETO PLANO para frontend / móvil)
+async perfilInstitucion(token: string) {
+  try {
+    const payload: any = jwt.verify(token, SECRET)
+
+    // Debe ser un token de Administrador
+    if (!payload || payload.rol !== 'Administrador') {
+      return { error: 'No autorizado, este token no es de institución' }
     }
+
+    // En el login guardas id_institucion; en el registro guardaste id
+    const idInst = Number(payload.id_institucion ?? payload.id)
+    if (!Number.isFinite(idInst) || idInst <= 0) {
+      return { error: 'ID de institución no presente en el token' }
+    }
+
+    const inst = await Institucion.findBy('id_institucion', idInst)
+    if (!inst) {
+      return { error: 'Perfil no encontrado' }
+    }
+
+    // Respuesta plana (sin password)
+    return {
+      id_institucion:    inst.id_institucion ?? idInst,
+      nombre_institucion: inst.nombre_institucion ?? null,
+      codigo_dane:        inst.codigo_dane ?? null,
+      direccion:          inst.direccion ?? null,
+      telefono:           inst.telefono ?? null,
+      jornada:            inst.jornada ?? null,
+      correo:             inst.correo ?? payload.correo ?? null,
+    }
+  } catch {
+    return { error: 'Token INVÁLIDO o expirado' }
   }
+}
+
 
   //ESTUDIANTES
 

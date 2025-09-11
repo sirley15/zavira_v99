@@ -262,8 +262,7 @@ async eliminarEstudiante({ params, request, response }: HttpContext) {
         return response.badRequest({ error: 'No hay registros válidos para importar' })
       }
 
-      // ----- Buscar existentes en la institución -----
-      // ----- Buscar existentes en TODA la tabla (índice único es global) -----
+      
       const documentos = candidatos.map((c) => c.numero_documento)
       const existentesRows = await Usuario.query()
       .whereIn('numero_documento', documentos)   // ← quitar filtro por institución
